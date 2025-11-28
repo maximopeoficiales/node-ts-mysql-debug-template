@@ -16,8 +16,9 @@ export class CreateUserUseCase {
 
     // Crear el usuario
     const user = await this.userRepository.create({
-      ...userData,
+      email: userData.email,
       password: hashedPassword,
+      name: userData.name,
     });
 
     return user;

@@ -51,6 +51,179 @@ auth-service-project/
 
 ---
 
+## 🏗️ Diagrama de Capas - Clean Architecture
+
+```mermaid
+graph TB
+    subgraph "Interfaces Layer"
+        A[UserController]
+        B[Routes]
+    end
+
+    subgraph "Application Layer"
+        C[CreateUserUseCase]
+        D[LoginUserUseCase]
+        E[GetUserUseCase]
+    end
+
+    subgraph "Domain Layer"
+        F[User Entity]
+        G[UserRepository Interface]
+    end
+
+    subgraph "Infrastructure Layer"
+        H[MySQLUserRepository]
+        I[DatabaseConnection]
+        J[Express App]
+    end
+
+    A --> C
+    A --> D
+    A --> E
+    B --> A
+    C --> G
+    D --> G
+    E --> G
+    G -.implements.-> H
+    H --> I
+    C --> F
+    D --> F
+    E --> F
+    J --> B
+
+    style F fill:#e1f5ff
+    style G fill:#e1f5ff
+    style C fill:#fff4e1
+    style D fill:#fff4e1
+    style E fill:#fff4e1
+    style A fill:#f0e1ff
+    style B fill:#f0e1ff
+    style H fill:#e1ffe1
+    style I fill:#e1ffe1
+    style J fill:#e1ffe1
+```
+
+---
+
+## 🔄 Diagrama de Flujo - Registro de Usuario
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Router
+    participant Controller
+    participant UseCase
+    participant Repository
+    participant Database
+
+    Client->>Router: POST /api/users/register
+    Router->>Controller: register(req, res)
+
+    Controller->>Controller: Validar entrada
+    Controller->>UseCase: execute(userData)
+
+    UseCase->>Repository: findByEmail(email)
+    Repository->>Database: SELECT * FROM users WHERE email = ?
+    Database-->>Repository: null (no existe)
+    Repository-->>UseCase: null
+
+    UseCase->>UseCase: Hashear contraseña
+    UseCase->>Repository: create(userData)
+    Repository->>Database: INSERT INTO users
+    Database-->>Repository: User creado
+    Repository-->>UseCase: User
+
+    UseCase-->>Controller: User
+    Controller->>Controller: Formatear respuesta
+    Controller-->>Router: JSON response
+    Router-->>Client: 201 Created
+```
+
+---
+
+## 🎯 Diagrama de Componentes
+
+```mermaid
+graph LR
+    subgraph External
+        A[Cliente HTTP]
+        B[MySQL Database]
+    end
+
+    subgraph Application
+        C[Express Server]
+        D[Routes]
+        E[Controllers]
+        F[Use Cases]
+        G[Repositories]
+        H[Entities]
+    end
+
+    A -->|HTTP Request| C
+    C --> D
+    D --> E
+    E --> F
+    F --> H
+    F --> G
+    G -->|SQL Queries| B
+
+    style A fill:#ffcccc
+    style B fill:#ccffcc
+    style C fill:#cce5ff
+    style F fill:#fff4cc
+    style H fill:#e6ccff
+```
+
+---
+
+## 📊 Diagrama de Dependencias
+
+```mermaid
+graph TD
+    A[Interfaces Layer] --> B[Application Layer]
+    B --> C[Domain Layer]
+    D[Infrastructure Layer] --> C
+    A --> D
+
+    style C fill:#4CAF50,color:#fff
+    style B fill:#2196F3,color:#fff
+    style A fill:#9C27B0,color:#fff
+    style D fill:#FF9800,color:#fff
+```
+
+**Regla de Dependencia:** Las flechas apuntan hacia adentro (hacia el dominio)
+
+---
+
+## 🔀 Diagrama de Casos de Uso
+
+```mermaid
+graph TB
+    User((Usuario))
+
+    subgraph "Sistema Auth Service"
+        UC1[Registrar Usuario]
+        UC2[Iniciar Sesión]
+        UC3[Obtener Usuario]
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+
+    UC1 --> DB[(MySQL)]
+    UC2 --> DB
+    UC3 --> DB
+
+    style User fill:#ff6b6b
+    style UC1 fill:#4ecdc4
+    style UC2 fill:#4ecdc4
+    style UC3 fill:#4ecdc4
+    style DB fill:#ffe66d
+```
+
+---
+
 ## 🏛️ Principios de Clean Architecture
 
 ### 1. **Capa de Dominio (Domain Layer)**
@@ -169,29 +342,28 @@ HTTP Request → Route → Controller → Use Case → Repository → Database
 
 ### Ejemplo: Registro de Usuario
 
-```
-1. Cliente hace POST /api/users/register
-   ↓
-2. Express Router (userRoutes.ts)
-   ↓
-3. UserController.register()
-   - Valida entrada
-   - Llama a CreateUserUseCase
-   ↓
-4. CreateUserUseCase.execute()
-   - Verifica email único
-   - Hashea contraseña
-   - Llama a UserRepository.create()
-   ↓
-5. MySQLUserRepository.create()
-   - Ejecuta query SQL
-   - Inserta en MySQL
-   ↓
-6. Retorna User ← ← ← ← ←
-   ↓
-7. Controller formatea respuesta
-   ↓
-8. Cliente recibe JSON response
+```mermaid
+flowchart TD
+    A[Cliente: POST /api/users/register] --> B[Express Router]
+    B --> C[UserController.register]
+    C --> D{Validar entrada}
+    D -->|Válido| E[CreateUserUseCase.execute]
+    D -->|Inválido| F[400 Bad Request]
+    E --> G[Verificar email único]
+    G --> H{Email existe?}
+    H -->|Sí| I[409 Conflict]
+    H -->|No| J[Hashear contraseña]
+    J --> K[UserRepository.create]
+    K --> L[(MySQL INSERT)]
+    L --> M[Retornar User]
+    M --> N[Formatear respuesta]
+    N --> O[201 Created]
+
+    style A fill:#e3f2fd
+    style E fill:#fff9c4
+    style K fill:#c8e6c9
+    style L fill:#ffccbc
+    style O fill:#c5e1a5
 ```
 
 ---
@@ -230,6 +402,20 @@ Cada capa tiene una responsabilidad clara y única.
 
 ## 🔀 Dependency Injection
 
+```mermaid
+graph LR
+    A[userRoutes.ts] -->|crea| B[MySQLUserRepository]
+    A -->|inyecta| C[CreateUserUseCase]
+    B -->|inyectado en| C
+    A -->|inyecta| D[UserController]
+    C -->|inyectado en| D
+
+    style A fill:#bbdefb
+    style B fill:#c8e6c9
+    style C fill:#fff9c4
+    style D fill:#f8bbd0
+```
+
 El proyecto usa inyección de dependencias manual:
 
 ```typescript
@@ -249,6 +435,28 @@ const userController = new UserController(createUserUseCase, ...);
 
 ## 🧪 Testing Strategy
 
+```mermaid
+graph TB
+    subgraph Tests
+        A[CreateUserUseCase.test.ts]
+        B[Mock UserRepository]
+    end
+
+    subgraph Production
+        C[CreateUserUseCase]
+        D[MySQLUserRepository]
+    end
+
+    A -.usa.-> B
+    A -.prueba.-> C
+    C -.usa en prod.-> D
+
+    style A fill:#e1bee7
+    style B fill:#ffccbc
+    style C fill:#fff9c4
+    style D fill:#c8e6c9
+```
+
 ```typescript
 // Test de CreateUserUseCase
 const mockRepository: UserRepository = {
@@ -267,17 +475,97 @@ const useCase = new CreateUserUseCase(mockRepository);
 
 ### Agregar un nuevo caso de uso:
 
-1. **Crear caso de uso** en `application/use-cases/`
-2. **Actualizar controller** en `interfaces/controllers/`
-3. **Agregar ruta** en `interfaces/routes/`
-4. **Si es necesario**, agregar método en repository
+```mermaid
+flowchart LR
+    A[1. Crear UseCase] --> B[2. Actualizar Controller]
+    B --> C[3. Agregar Route]
+    C --> D{Necesita nuevo<br/>método en repo?}
+    D -->|Sí| E[4. Actualizar Repository]
+    D -->|No| F[Listo!]
+    E --> F
+
+    style A fill:#fff9c4
+    style B fill:#f8bbd0
+    style C fill:#b2dfdb
+    style E fill:#c8e6c9
+    style F fill:#c5e1a5
+```
 
 ### Cambiar de MySQL a PostgreSQL:
+
+```mermaid
+flowchart TD
+    A[1. Crear PostgreSQLUserRepository] --> B[2. Implementar UserRepository interface]
+    B --> C[3. Actualizar inyección en routes]
+    C --> D[UseCases no cambian!]
+
+    style A fill:#b2dfdb
+    style B fill:#c8e6c9
+    style C fill:#a5d6a7
+    style D fill:#81c784
+```
 
 1. Crear `PostgreSQLUserRepository.ts` en `infrastructure/repositories/`
 2. Implementar la interfaz `UserRepository`
 3. Actualizar la inyección en `userRoutes.ts`
 4. ¡Listo! Los casos de uso no cambian
+
+---
+
+## 📊 Diagrama de Clases
+
+```mermaid
+classDiagram
+    class User {
+        +int id
+        +string email
+        +string password
+        +string name
+        +Date createdAt
+        +Date updatedAt
+    }
+
+    class UserRepository {
+        <<interface>>
+        +create(userData) User
+        +findById(id) User|null
+        +findByEmail(email) User|null
+        +update(id, userData) User|null
+        +delete(id) boolean
+        +findAll() User[]
+    }
+
+    class MySQLUserRepository {
+        -Pool db
+        +create(userData) User
+        +findById(id) User|null
+        +findByEmail(email) User|null
+        +update(id, userData) User|null
+        +delete(id) boolean
+        +findAll() User[]
+        -mapRowToUser(row) User
+    }
+
+    class CreateUserUseCase {
+        -UserRepository repository
+        +execute(userData) User
+    }
+
+    class UserController {
+        -CreateUserUseCase createUserUseCase
+        -LoginUserUseCase loginUserUseCase
+        -GetUserUseCase getUserUseCase
+        +register(req, res) void
+        +login(req, res) void
+        +getUser(req, res) void
+    }
+
+    UserRepository <|.. MySQLUserRepository : implements
+    CreateUserUseCase --> UserRepository : uses
+    UserController --> CreateUserUseCase : uses
+    MySQLUserRepository ..> User : creates
+    CreateUserUseCase ..> User : returns
+```
 
 ---
 

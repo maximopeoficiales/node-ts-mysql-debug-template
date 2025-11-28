@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { CreateUserUseCase } from '../../application/use-cases/CreateUserUseCase';
 import { LoginUserUseCase } from '../../application/use-cases/LoginUserUseCase';
 import { GetUserUseCase } from '../../application/use-cases/GetUserUseCase';
-import { UserRepository } from '../../domain/repositories/UserRepository';
+import { CreateUserDTO, LoginDTO } from '../../domain/entities/User';
 
 export class UserController {
   constructor(
@@ -13,15 +13,9 @@ export class UserController {
 
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, name } = req.body;
+      const userData = req.body as CreateUserDTO;
 
-      // Validaciones básicas
-      if (!email || !password || !name) {
-        res.status(400).json({ error: 'Email, password and name are required' });
-        return;
-      }
-
-      const user = await this.createUserUseCase.execute({ email, password, name });
+      const user = await this.createUserUseCase.execute(userData);
 
       // No devolver la contraseña
       const { password: _, ...userResponse } = user;
@@ -45,14 +39,9 @@ export class UserController {
 
   async login(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
+      const loginData = req.body as LoginDTO;
 
-      if (!email || !password) {
-        res.status(400).json({ error: 'Email and password are required' });
-        return;
-      }
-
-      const result = await this.loginUserUseCase.execute({ email, password });
+      const result = await this.loginUserUseCase.execute(loginData);
 
       res.status(200).json({
         message: 'Login successful',
