@@ -15,8 +15,11 @@ export class DatabaseConnection {
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'auth_service_db',
       waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
+      connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '10'),
+      queueLimit: parseInt(process.env.DB_QUEUE_LIMIT || '0'),
+      // Configuraciones adicionales para optimización
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
     });
   }
 

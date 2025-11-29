@@ -5,15 +5,19 @@ import { LoginUserUseCase } from '../../application/use-cases/LoginUserUseCase';
 import { GetUserUseCase } from '../../application/use-cases/GetUserUseCase';
 import { LogoutUserUseCase } from '../../application/use-cases/LogoutUserUseCase';
 import { MySQLUserRepository } from '../../infrastructure/repositories/MySQLUserRepository';
+import { CachedUserRepository } from '../../infrastructure/repositories/CachedUserRepository';
 import { DynamoDBSessionRepository } from '../../infrastructure/repositories/DynamoDBSessionRepository';
 import { ValidationMiddleware } from '../../infrastructure/middleware/ValidationMiddleware';
 import { AuthMiddleware } from '../../infrastructure/middleware/AuthMiddleware';
+import { RateLimitFactory } from '../../infrastructure/middleware/RateLimitMiddleware';
 import { CreateUserDTO, LoginDTO } from '../../domain/entities/User';
 
 const router = Router();
 
 // Inicializar repositorios
-const userRepository = new MySQLUserRepository();
+const mysqlUserRepository = new MySQLUserRepository();
+// Envolver con cache decorator (3600s = 1 hora)
+const userRepository = new CachedUserRepository(mysqlUserRepository, 3600);
 const sessionRepository = new DynamoDBSessionRepository();
 
 // Inicializar casos de uso
@@ -27,24 +31,45 @@ const userController = new UserController(
   createUserUseCase,
   loginUserUseCase,
   getUserUseCase,
-  logoutUserUseCase
+  logoutUserUseCase,
+  userRepository
 );
 
 // Inicializar middleware de autenticación
 const authMiddleware = new AuthMiddleware(sessionRepository);
 
-// Rutas públicas
-router.post('/register', ValidationMiddleware.validate(CreateUserDTO), (req, res) =>
-  userController.register(req, res)
+// Inicializar rate limiters
+const registerRateLimit = RateLimitFactory.register();
+const loginRateLimit = RateLimitFactory.login();
+const generalRateLimit = RateLimitFactory.moderate();
+
+// Rutas públicas con rate limiting
+router.post(
+  '/register',
+  registerRateLimit.middleware(),
+  ValidationMiddleware.validate(CreateUserDTO),
+  (req, res) => userController.register(req, res)
 );
 
-router.post('/login', ValidationMiddleware.validate(LoginDTO), (req, res) =>
-  userController.login(req, res)
+router.post(
+  '/login',
+  loginRateLimit.middleware(),
+  ValidationMiddleware.validate(LoginDTO),
+  (req, res) => userController.login(req, res)
 );
 
-// Rutas protegidas
-router.post('/logout', authMiddleware.authenticate, (req, res) => userController.logout(req, res));
+// Rutas protegidas con rate limiting
+router.post('/logout', generalRateLimit.middleware(), authMiddleware.authenticate, (req, res) =>
+  userController.logout(req, res)
+);
 
-router.get('/:id', authMiddleware.authenticate, (req, res) => userController.getUser(req, res));
+router.get('/:id', generalRateLimit.middleware(), authMiddleware.authenticate, (req, res) =>
+  userController.getUser(req, res)
+);
+
+// Nueva ruta: listado paginado de usuarios
+router.get('/', generalRateLimit.middleware(), authMiddleware.authenticate, (req, res) =>
+  userController.listUsers(req, res)
+);
 
 export default router;

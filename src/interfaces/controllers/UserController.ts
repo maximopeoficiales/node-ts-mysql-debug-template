@@ -5,13 +5,15 @@ import { GetUserUseCase } from '../../application/use-cases/GetUserUseCase';
 import { LogoutUserUseCase } from '../../application/use-cases/LogoutUserUseCase';
 import { CreateUserDTO, LoginDTO } from '../../domain/entities/User';
 import { AuthRequest } from '../../infrastructure/middleware/AuthMiddleware';
+import { UserRepository } from '../../domain/repositories/UserRepository';
 
 export class UserController {
   constructor(
     private createUserUseCase: CreateUserUseCase,
     private loginUserUseCase: LoginUserUseCase,
     private getUserUseCase: GetUserUseCase,
-    private logoutUserUseCase: LogoutUserUseCase
+    private logoutUserUseCase: LogoutUserUseCase,
+    private userRepository: UserRepository
   ) {}
 
   async register(req: Request, res: Response): Promise<void> {
@@ -117,6 +119,45 @@ export class UserController {
       await this.logoutUserUseCase.execute(token);
 
       res.status(200).json({ message: 'Logout successful' });
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  }
+
+  async listUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      // Validar límites
+      if (limit < 1 || limit > 100) {
+        res.status(400).json({ error: 'Limit must be between 1 and 100' });
+        return;
+      }
+
+      if (offset < 0) {
+        res.status(400).json({ error: 'Offset must be >= 0' });
+        return;
+      }
+
+      const result = await this.userRepository.findAllPaginated({ limit, offset });
+
+      // Remover passwords de todos los usuarios
+      const users = result.data.map(({ password: _, ...user }) => user);
+
+      res.status(200).json({
+        users,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error) {
       if (error instanceof Error) {
         res.status(500).json({ error: error.message });

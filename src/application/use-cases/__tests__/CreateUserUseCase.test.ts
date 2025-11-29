@@ -15,6 +15,7 @@ describe('CreateUserUseCase', () => {
       update: jest.fn(),
       delete: jest.fn(),
       findAll: jest.fn(),
+      findAllPaginated: jest.fn(),
     };
 
     createUserUseCase = new CreateUserUseCase(mockUserRepository);

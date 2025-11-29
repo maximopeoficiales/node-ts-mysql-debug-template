@@ -2,6 +2,8 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import { DatabaseConnection } from './database/DatabaseConnection';
 import { DynamoDBConnection } from './database/DynamoDBConnection';
+import { RedisConnection } from './database/RedisConnection';
+import { PerformanceMonitor } from './middleware/PerformanceMonitor';
 import routes from '../interfaces/routes';
 
 dotenv.config();
@@ -9,10 +11,12 @@ dotenv.config();
 export class App {
   private app: Application;
   private port: number;
+  private performanceMonitor: PerformanceMonitor;
 
   constructor() {
     this.app = express();
     this.port = parseInt(process.env.PORT || '3000');
+    this.performanceMonitor = new PerformanceMonitor(1000); // 1 segundo threshold
     this.initializeMiddlewares();
     this.initializeRoutes();
     this.initializeErrorHandling();
@@ -21,6 +25,9 @@ export class App {
   private initializeMiddlewares(): void {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
+
+    // Performance monitoring middleware (debe ir primero)
+    this.app.use(this.performanceMonitor.middleware());
 
     // CORS middleware
     this.app.use((req: Request, res: Response, next: NextFunction) => {
@@ -43,19 +50,30 @@ export class App {
   }
 
   private initializeRoutes(): void {
+    // Health check endpoint con métricas de rendimiento
+    this.app.get('/health', this.performanceMonitor.healthCheckEndpoint());
+
     this.app.use('/api', routes);
 
     // Root route
     this.app.get('/', (req: Request, res: Response) => {
       res.json({
         message: 'Auth Service API - Clean Architecture',
-        version: '1.0.0',
+        version: '2.0.0',
+        optimizations: [
+          'Redis Cache',
+          'Rate Limiting',
+          'Pagination',
+          'Connection Pool',
+          'Performance Monitor',
+        ],
         endpoints: {
-          health: '/api/health',
+          health: '/health',
           register: 'POST /api/users/register',
           login: 'POST /api/users/login',
           logout: 'POST /api/users/logout (protected)',
           getUser: 'GET /api/users/:id (protected)',
+          listUsers: 'GET /api/users?limit=10&offset=0 (protected)',
         },
       });
     });
@@ -85,12 +103,22 @@ export class App {
       const dynamoDB = DynamoDBConnection.getInstance();
       await dynamoDB.testConnection();
 
+      // Test Redis connection
+      const redis = RedisConnection.getInstance();
+      await redis.connect();
+      const redisHealthy = await redis.ping();
+      if (!redisHealthy) {
+        throw new Error('Redis connection failed');
+      }
+
       // Start server
       this.app.listen(this.port, () => {
         console.log(`\n🚀 Server running on port ${this.port}`);
         console.log(`📍 URL: http://localhost:${this.port}`);
         console.log(`📚 API Documentation: http://localhost:${this.port}/api`);
         console.log(`🔶 DynamoDB: Connected`);
+        console.log(`🔴 Redis: Connected`);
+        console.log(`⚡ Performance monitoring: Enabled`);
         console.log('\n✨ Ready to accept requests\n');
       });
     } catch (error) {
