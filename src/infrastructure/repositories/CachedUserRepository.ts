@@ -191,10 +191,8 @@ export class CachedUserRepository implements UserRepository {
     }
 
     console.log(`✗ Cache miss: users page (limit:${limit}, offset:${offset})`);
-
     // Si no está en caché, buscar en BD
     const result = await this.baseRepository.findAllPaginated(options);
-
     // Guardar en caché (TTL más corto para datos paginados: 5 minutos)
     await this.cache.set(cacheKey, result, 300);
 

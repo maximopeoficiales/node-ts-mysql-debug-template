@@ -103,8 +103,21 @@ export class MySQLUserRepository implements UserRepository {
     const total = countRows[0].total;
 
     // Query paginado
-    const query = 'SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    const [rows] = await this.db.execute<RowDataPacket[]>(query, [limit, offset]);
+    const safeLimit = Math.max(1, Math.min(100, Number(limit)));
+    const safeOffset = Math.max(0, Number(offset));
+
+    if (!Number.isInteger(safeLimit) || !Number.isInteger(safeOffset)) {
+      throw new Error('Invalid pagination values');
+    }
+
+    const query = `
+      SELECT *
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT ${safeOffset}, ${safeLimit}
+    `;
+
+    const [rows] = await this.db.query<RowDataPacket[]>(query);
     const data = rows.map((row) => this.mapRowToUser(row));
 
     return {

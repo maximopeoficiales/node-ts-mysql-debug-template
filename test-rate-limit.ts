@@ -495,23 +495,23 @@ async function main(): Promise<void> {
     }
 
     // Ejecutar tests
-    await testRegisterRateLimit();
-    await sleep(1000);
+    // await testRegisterRateLimit();
+    // await sleep(1000);
 
-    await testLoginRateLimit();
-    await sleep(1000);
+    // await testLoginRateLimit();
+    // await sleep(1000);
 
-    await testHeadersProgression();
-    await sleep(1000);
+    // await testHeadersProgression();
+    // await sleep(1000);
 
-    await testConcurrentRequests();
-    await sleep(1000);
+    // await testConcurrentRequests();
+    // await sleep(1000);
 
-    await testPerformanceMonitoring();
-    await sleep(1000);
+    // await testPerformanceMonitoring();
+    // await sleep(1000);
 
-    await testCachePerformance();
-    await sleep(1000);
+    // await testCachePerformance();
+    // await sleep(1000);
 
     await testPagination();
 

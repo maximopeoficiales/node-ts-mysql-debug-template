@@ -1,4 +1,4 @@
-import { User, CreateUserDTO, UserResponse } from '../entities/User';
+import { CreateUserDTO, User } from '../entities/User';
 
 export interface PaginationOptions {
   limit: number;
