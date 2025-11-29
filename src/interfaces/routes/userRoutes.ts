@@ -4,7 +4,7 @@ import { CreateUserUseCase } from '../../application/use-cases/CreateUserUseCase
 import { LoginUserUseCase } from '../../application/use-cases/LoginUserUseCase';
 import { GetUserUseCase } from '../../application/use-cases/GetUserUseCase';
 import { LogoutUserUseCase } from '../../application/use-cases/LogoutUserUseCase';
-import { MySQLUserRepository } from '../../infrastructure/repositories/MySQLUserRepository';
+import { PrismaUserRepository } from '../../infrastructure/repositories/PrismaUserRepository';
 import { CachedUserRepository } from '../../infrastructure/repositories/CachedUserRepository';
 import { DynamoDBSessionRepository } from '../../infrastructure/repositories/DynamoDBSessionRepository';
 import { ValidationMiddleware } from '../../infrastructure/middleware/ValidationMiddleware';
@@ -15,9 +15,9 @@ import { CreateUserDTO, LoginDTO } from '../../domain/entities/User';
 const router = Router();
 
 // Inicializar repositorios
-const mysqlUserRepository = new MySQLUserRepository();
+const prismaUserRepository = new PrismaUserRepository();
 // Envolver con cache decorator (3600s = 1 hora)
-const userRepository = new CachedUserRepository(mysqlUserRepository, 3600);
+const userRepository = new CachedUserRepository(prismaUserRepository, 3600);
 const sessionRepository = new DynamoDBSessionRepository();
 
 // Inicializar casos de uso

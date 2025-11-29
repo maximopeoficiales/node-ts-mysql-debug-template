@@ -1,12 +1,10 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
-import dotenv from 'dotenv';
-import { DatabaseConnection } from './database/DatabaseConnection';
+import { PrismaConnection } from './database/PrismaConnection';
 import { DynamoDBConnection } from './database/DynamoDBConnection';
 import { RedisConnection } from './database/RedisConnection';
 import { PerformanceMonitor } from './middleware/PerformanceMonitor';
+import { config, validateConfig } from '../config/environment';
 import routes from '../interfaces/routes';
-
-dotenv.config();
 
 export class App {
   private app: Application;
@@ -14,8 +12,9 @@ export class App {
   private performanceMonitor: PerformanceMonitor;
 
   constructor() {
+    validateConfig();
     this.app = express();
-    this.port = parseInt(process.env.PORT || '3000');
+    this.port = config.server.port;
     this.performanceMonitor = new PerformanceMonitor(1000); // 1 segundo threshold
     this.initializeMiddlewares();
     this.initializeRoutes();
@@ -58,14 +57,22 @@ export class App {
     // Root route
     this.app.get('/', (req: Request, res: Response) => {
       res.json({
-        message: 'Auth Service API - Clean Architecture',
-        version: '2.0.0',
-        optimizations: [
-          'Redis Cache',
+        message: 'Auth Service API - Clean Architecture + Prisma + PostgreSQL',
+        version: '3.0.0',
+        stack: {
+          database: 'PostgreSQL 16',
+          orm: 'Prisma',
+          cache: 'Redis 7',
+          sessions: 'DynamoDB (LocalStack)',
+        },
+        features: [
+          'Prisma ORM with PostgreSQL',
+          'Redis Caching (Decorator Pattern)',
           'Rate Limiting',
-          'Pagination',
-          'Connection Pool',
-          'Performance Monitor',
+          'DynamoDB Sessions',
+          'Performance Monitoring',
+          'Type Safety',
+          'Centralized Configuration',
         ],
         endpoints: {
           health: '/health',
@@ -94,10 +101,8 @@ export class App {
 
   public async start(): Promise<void> {
     try {
-      // Test MySQL connection
-      const db = DatabaseConnection.getInstance();
-      await db.testConnection();
-      await db.initializeDatabase();
+      // Test PostgreSQL connection (Prisma)
+      await PrismaConnection.testConnection();
 
       // Test DynamoDB connection
       const dynamoDB = DynamoDBConnection.getInstance();
@@ -116,9 +121,10 @@ export class App {
         console.log(`\n🚀 Server running on port ${this.port}`);
         console.log(`📍 URL: http://localhost:${this.port}`);
         console.log(`📚 API Documentation: http://localhost:${this.port}/api`);
-        console.log(`🔶 DynamoDB: Connected`);
+        console.log(`🐘 PostgreSQL: Connected (Prisma ORM)`);
         console.log(`🔴 Redis: Connected`);
-        console.log(`⚡ Performance monitoring: Enabled`);
+        console.log(`🔶 DynamoDB: Connected`);
+        console.log(`⚡ Optimizations: Enabled`);
         console.log('\n✨ Ready to accept requests\n');
       });
     } catch (error) {

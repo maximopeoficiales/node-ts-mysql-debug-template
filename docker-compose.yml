@@ -1,27 +1,28 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: auth-service-mysql
+  # 🐘 PostgreSQL (reemplaza MySQL)
+  postgres:
+    image: postgres:16-alpine
+    container_name: auth-service-postgres
     restart: 'no'
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-authpass}
-      MYSQL_DATABASE: ${DB_NAME:-auth_service_db}
-      MYSQL_USER: ${DB_USER:-authuser}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-authpass}
+      POSTGRES_USER: ${DB_USER:-authuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-authpass}
+      POSTGRES_DB: ${DB_NAME:-auth_service_db}
     ports:
-      - '${DB_PORT:-3306}:3306'
+      - '${DB_PORT:-5432}:5432'
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - auth-network
     healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
-      timeout: 20s
-      retries: 10
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-authuser}']
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
+  # 🔴 Redis (Cache & Rate Limiting)
   redis:
     image: redis:7-alpine
     container_name: auth-service-redis
@@ -43,6 +44,7 @@ services:
       timeout: 3s
       retries: 5
 
+  # 🔶 LocalStack (DynamoDB)
   localstack:
     image: localstack/localstack:3.0
     container_name: auth-service-localstack
@@ -55,8 +57,20 @@ services:
     networks:
       - auth-network
 
+  # 🎨 Adminer (PostgreSQL Admin UI - opcional)
+  adminer:
+    image: adminer:latest
+    container_name: auth-service-adminer
+    restart: 'no'
+    ports:
+      - '8080:8080'
+    networks:
+      - auth-network
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
 volumes:
-  mysql_data:
+  postgres_data:
     driver: local
   redis_data:
     driver: local

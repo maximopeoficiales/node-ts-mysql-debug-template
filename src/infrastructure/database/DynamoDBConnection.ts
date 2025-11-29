@@ -1,8 +1,6 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { config as envConfig } from '../../config/environment';
 
 export class DynamoDBConnection {
   private static instance: DynamoDBConnection;
@@ -11,17 +9,14 @@ export class DynamoDBConnection {
 
   private constructor() {
     const config = {
-      region: process.env.AWS_REGION || 'us-east-1',
-      ...(process.env.DYNAMODB_ENDPOINT && {
-        endpoint: process.env.DYNAMODB_ENDPOINT, // Para desarrollo local
+      region: envConfig.dynamodb.region,
+      ...(envConfig.dynamodb.endpoint && {
+        endpoint: envConfig.dynamodb.endpoint,
       }),
-      ...(process.env.AWS_ACCESS_KEY_ID &&
-        process.env.AWS_SECRET_ACCESS_KEY && {
-          credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-          },
-        }),
+      credentials: {
+        accessKeyId: envConfig.dynamodb.accessKeyId,
+        secretAccessKey: envConfig.dynamodb.secretAccessKey,
+      },
     };
 
     this.client = new DynamoDBClient(config);

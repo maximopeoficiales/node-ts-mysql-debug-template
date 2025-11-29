@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { SessionRepository } from '@domain/repositories/SessionRepository';
+import { config } from '../../config/environment';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -24,7 +25,7 @@ export class AuthMiddleware {
       const token = authHeader.substring(7);
 
       // Verificar JWT
-      const jwtSecret = process.env.JWT_SECRET || 'default-secret';
+      const jwtSecret = config.jwt.secret;
       const decoded = jwt.verify(token, jwtSecret) as {
         userId: number;
         email: string;

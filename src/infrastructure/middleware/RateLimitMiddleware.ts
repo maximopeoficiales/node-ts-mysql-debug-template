@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { RedisCache } from '../cache/RedisCache';
+import { config } from '../../config/environment';
 
 interface RateLimitConfig {
   windowMs: number; // Ventana de tiempo en milisegundos
@@ -101,13 +102,13 @@ export class RateLimitMiddleware {
  */
 export class RateLimitFactory {
   /**
-   * Rate limiter estricto: 100 requests cada 15 minutos
+   * Rate limiter estricto: 10 requests cada hora
    */
   static strict(): RateLimitMiddleware {
     return new RateLimitMiddleware({
-      windowMs: 15 * 60 * 1000, // 15 minutos
-      maxRequests: 100,
-      message: 'Has excedido el límite de peticiones. Intenta de nuevo en 15 minutos.',
+      windowMs: config.rateLimit.strict.duration * 1000,
+      maxRequests: config.rateLimit.strict.points,
+      message: 'Has excedido el límite de peticiones. Intenta de nuevo más tarde.',
     });
   }
 
@@ -116,8 +117,19 @@ export class RateLimitFactory {
    */
   static moderate(): RateLimitMiddleware {
     return new RateLimitMiddleware({
-      windowMs: 15 * 60 * 1000, // 15 minutos
-      maxRequests: 300,
+      windowMs: config.rateLimit.moderate.duration * 1000,
+      maxRequests: config.rateLimit.moderate.points,
+      message: 'Has excedido el límite de peticiones. Intenta de nuevo más tarde.',
+    });
+  }
+
+  /**
+   * Rate limiter general: 100 requests por hora
+   */
+  static general(): RateLimitMiddleware {
+    return new RateLimitMiddleware({
+      windowMs: config.rateLimit.general.duration * 1000,
+      maxRequests: config.rateLimit.general.points,
       message: 'Has excedido el límite de peticiones. Intenta de nuevo más tarde.',
     });
   }
@@ -127,8 +139,8 @@ export class RateLimitFactory {
    */
   static login(): RateLimitMiddleware {
     return new RateLimitMiddleware({
-      windowMs: 15 * 60 * 1000, // 15 minutos
-      maxRequests: 5,
+      windowMs: config.rateLimit.login.duration * 1000,
+      maxRequests: config.rateLimit.login.points,
       message: 'Demasiados intentos de login. Intenta de nuevo en 15 minutos.',
       skipSuccessfulRequests: true, // Solo contar logins fallidos
       keyGenerator: (req: Request) => {
@@ -143,8 +155,8 @@ export class RateLimitFactory {
    */
   static register(): RateLimitMiddleware {
     return new RateLimitMiddleware({
-      windowMs: 60 * 60 * 1000, // 1 hora
-      maxRequests: 3,
+      windowMs: config.rateLimit.register.duration * 1000,
+      maxRequests: config.rateLimit.register.points,
       message: 'Has excedido el límite de registros. Intenta de nuevo en 1 hora.',
       keyGenerator: (req: Request) => {
         const ip = req.ip || req.socket.remoteAddress || 'unknown';

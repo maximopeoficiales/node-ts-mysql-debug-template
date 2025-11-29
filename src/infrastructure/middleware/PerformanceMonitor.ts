@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { config } from '../../config/environment';
 
 interface PerformanceMetrics {
   path: string;
@@ -15,8 +16,8 @@ export class PerformanceMonitor {
   private metrics: PerformanceMetrics[] = [];
   private maxMetricsHistory: number;
 
-  constructor(slowThreshold: number = 1000, maxMetricsHistory: number = 100) {
-    this.slowThreshold = slowThreshold; // Milisegundos
+  constructor(slowThreshold?: number, maxMetricsHistory: number = 100) {
+    this.slowThreshold = slowThreshold || config.performance.slowRequestThreshold;
     this.maxMetricsHistory = maxMetricsHistory;
   }
 

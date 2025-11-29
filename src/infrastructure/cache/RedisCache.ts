@@ -1,12 +1,13 @@
 import { RedisConnection } from '../database/RedisConnection';
+import { config } from '../../config/environment';
 
 export class RedisCache {
   public redisConnection: RedisConnection;
   private defaultTTL: number;
 
-  constructor(defaultTTL: number = 3600) {
+  constructor(defaultTTL?: number) {
     this.redisConnection = RedisConnection.getInstance();
-    this.defaultTTL = defaultTTL;
+    this.defaultTTL = defaultTTL || config.redis.cacheTTL;
   }
 
   /**

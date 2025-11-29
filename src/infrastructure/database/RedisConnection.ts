@@ -1,4 +1,5 @@
 import { createClient, RedisClientType } from 'redis';
+import { config } from '../../config/environment';
 
 export class RedisConnection {
   private static instance: RedisConnection;
@@ -21,8 +22,8 @@ export class RedisConnection {
     }
 
     try {
-      const host = process.env.REDIS_HOST || 'localhost';
-      const port = parseInt(process.env.REDIS_PORT || '6379', 10);
+      const host = config.redis.host;
+      const port = config.redis.port;
 
       this.client = createClient({
         socket: {

@@ -2,11 +2,12 @@ import { PutCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { DescribeTableCommand, CreateTableCommand } from '@aws-sdk/client-dynamodb';
 import { SessionRepository, SessionData } from '@domain/repositories/SessionRepository';
 import { DynamoDBConnection } from '../database/DynamoDBConnection';
+import { config } from '../../config/environment';
 
 export class DynamoDBSessionRepository implements SessionRepository {
   private docClient = DynamoDBConnection.getInstance().getDocClient();
   private client = DynamoDBConnection.getInstance().getClient();
-  private readonly tableName = process.env.DYNAMODB_SESSIONS_TABLE || 'auth-sessions';
+  private readonly tableName = config.dynamodb.sessionsTable;
 
   constructor() {
     this.ensureTableExists();

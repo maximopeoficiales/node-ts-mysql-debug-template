@@ -1,8 +1,9 @@
 import { UserRepository } from '../../domain/repositories/UserRepository';
 import { SessionRepository } from '../../domain/repositories/SessionRepository';
-import { LoginDTO } from '../../domain/entities/User';
+import { User, LoginDTO } from '../../domain/entities/User';
+import { config } from '../../config/environment';
 import bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 export interface LoginResponse {
   token: string;
@@ -38,8 +39,8 @@ export class LoginUserUseCase {
     }
 
     // Generar token JWT
-    const jwtSecret = process.env.JWT_SECRET || 'default-secret';
-    const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1h';
+    const jwtSecret = config.jwt.secret;
+    const jwtExpiresIn = config.jwt.expiresIn;
 
     const token = jwt.sign({ userId: user.id, email: user.email }, jwtSecret, {
       expiresIn: jwtExpiresIn as string,

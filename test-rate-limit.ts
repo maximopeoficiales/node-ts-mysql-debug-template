@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
+import { config } from './src/config/environment';
 
-const BASE_URL = process.env.API_URL || 'http://localhost:3000';
+const BASE_URL = process.env.API_URL || `http://localhost:${config.server.port}`;
 
 // Colores para output
 const COLORS = {
