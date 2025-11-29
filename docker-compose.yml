@@ -4,14 +4,14 @@ services:
   mysql:
     image: mysql:8.0
     container_name: auth-service-mysql
-    restart: always
+    restart: 'no'
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: auth_service_db
-      MYSQL_USER: authuser
-      MYSQL_PASSWORD: authpass
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-authpass}
+      MYSQL_DATABASE: ${DB_NAME:-auth_service_db}
+      MYSQL_USER: ${DB_USER:-authuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-authpass}
     ports:
-      - '3306:3306'
+      - '${DB_PORT:-3306}:3306'
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -21,6 +21,18 @@ services:
       test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
       timeout: 20s
       retries: 10
+
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: auth-service-localstack
+    restart: 'no'
+    ports:
+      - '4567:4566'
+    environment:
+      - SERVICES=dynamodb
+      - DEBUG=0
+    networks:
+      - auth-network
 
 volumes:
   mysql_data:

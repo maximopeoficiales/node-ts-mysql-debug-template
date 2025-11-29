@@ -2,13 +2,16 @@ import { Request, Response } from 'express';
 import { CreateUserUseCase } from '../../application/use-cases/CreateUserUseCase';
 import { LoginUserUseCase } from '../../application/use-cases/LoginUserUseCase';
 import { GetUserUseCase } from '../../application/use-cases/GetUserUseCase';
+import { LogoutUserUseCase } from '../../application/use-cases/LogoutUserUseCase';
 import { CreateUserDTO, LoginDTO } from '../../domain/entities/User';
+import { AuthRequest } from '../../infrastructure/middleware/AuthMiddleware';
 
 export class UserController {
   constructor(
     private createUserUseCase: CreateUserUseCase,
     private loginUserUseCase: LoginUserUseCase,
-    private getUserUseCase: GetUserUseCase
+    private getUserUseCase: GetUserUseCase,
+    private logoutUserUseCase: LogoutUserUseCase
   ) {}
 
   async register(req: Request, res: Response): Promise<void> {
@@ -41,7 +44,14 @@ export class UserController {
     try {
       const loginData = req.body as LoginDTO;
 
-      const result = await this.loginUserUseCase.execute(loginData);
+      // Capturar contexto de la petición
+      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+
+      const result = await this.loginUserUseCase.execute(loginData, {
+        ipAddress,
+        userAgent,
+      });
 
       res.status(200).json({
         message: 'Login successful',
@@ -88,6 +98,27 @@ export class UserController {
           res.status(404).json({ error: error.message });
           return;
         }
+        res.status(500).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  }
+
+  async logout(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const token = req.headers.authorization?.substring(7);
+
+      if (!token) {
+        res.status(400).json({ error: 'Token is required' });
+        return;
+      }
+
+      await this.logoutUserUseCase.execute(token);
+
+      res.status(200).json({ message: 'Logout successful' });
+    } catch (error) {
+      if (error instanceof Error) {
         res.status(500).json({ error: error.message });
       } else {
         res.status(500).json({ error: 'Internal server error' });

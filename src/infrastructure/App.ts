@@ -1,6 +1,7 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import { DatabaseConnection } from './database/DatabaseConnection';
+import { DynamoDBConnection } from './database/DynamoDBConnection';
 import routes from '../interfaces/routes';
 
 dotenv.config();
@@ -26,7 +27,7 @@ export class App {
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
       res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      
+
       if (req.method === 'OPTIONS') {
         res.sendStatus(200);
       } else {
@@ -53,7 +54,8 @@ export class App {
           health: '/api/health',
           register: 'POST /api/users/register',
           login: 'POST /api/users/login',
-          getUser: 'GET /api/users/:id',
+          logout: 'POST /api/users/logout (protected)',
+          getUser: 'GET /api/users/:id (protected)',
         },
       });
     });
@@ -74,16 +76,21 @@ export class App {
 
   public async start(): Promise<void> {
     try {
-      // Test database connection
+      // Test MySQL connection
       const db = DatabaseConnection.getInstance();
       await db.testConnection();
       await db.initializeDatabase();
+
+      // Test DynamoDB connection
+      const dynamoDB = DynamoDBConnection.getInstance();
+      await dynamoDB.testConnection();
 
       // Start server
       this.app.listen(this.port, () => {
         console.log(`\n🚀 Server running on port ${this.port}`);
         console.log(`📍 URL: http://localhost:${this.port}`);
         console.log(`📚 API Documentation: http://localhost:${this.port}/api`);
+        console.log(`🔶 DynamoDB: Connected`);
         console.log('\n✨ Ready to accept requests\n');
       });
     } catch (error) {
