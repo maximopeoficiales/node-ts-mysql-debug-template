@@ -4,6 +4,9 @@ import { User, LoginDTO } from '../../domain/entities/User';
 import { UnauthorizedError } from '../../domain/errors/AppError';
 import { logger } from '../../infrastructure/logger/Logger';
 import { config } from '../../config/environment';
+import { IEventBus } from '../../domain/events/IEventBus';
+import { IEvent } from '../../domain/events/IEvent';
+import { EventType, UserLoginSuccessEventData, UserLoginFailedEventData } from '../dtos/EventDTOs';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -24,7 +27,8 @@ export interface LoginContext {
 export class LoginUserUseCase {
   constructor(
     private userRepository: UserRepository,
-    private sessionRepository: SessionRepository
+    private sessionRepository: SessionRepository,
+    private eventBus?: IEventBus // Opcional para mantener retrocompatibilidad
   ) {}
 
   async execute(loginData: LoginDTO, context?: LoginContext): Promise<LoginResponse> {
@@ -32,6 +36,10 @@ export class LoginUserUseCase {
     const user = await this.userRepository.findByEmail(loginData.email);
     if (!user) {
       logger.warn({ message: 'Login attempt with non-existent email', email: loginData.email });
+
+      // Emitir evento: Login fallido
+      await this.publishLoginFailedEvent(loginData.email, 'user_not_found', context);
+
       throw new UnauthorizedError('Invalid credentials');
     }
 
@@ -39,6 +47,10 @@ export class LoginUserUseCase {
     const isPasswordValid = await bcrypt.compare(loginData.password, user.password);
     if (!isPasswordValid) {
       logger.warn({ message: 'Login attempt with invalid password', email: loginData.email });
+
+      // Emitir evento: Login fallido
+      await this.publishLoginFailedEvent(loginData.email, 'invalid_credentials', context);
+
       throw new UnauthorizedError('Invalid credentials');
     }
 
@@ -64,6 +76,41 @@ export class LoginUserUseCase {
       expiresInSeconds
     );
 
+    // Emitir evento: Login exitoso
+    if (this.eventBus) {
+      const event: IEvent = {
+        type: EventType.USER_LOGIN_SUCCESS,
+        data: {
+          userId: user.id.toString(),
+          email: user.email,
+          sessionId: token,
+          ip: context?.ipAddress || 'unknown',
+          userAgent: context?.userAgent,
+          timestamp: new Date(),
+        } as UserLoginSuccessEventData,
+        timestamp: new Date(),
+        metadata: {
+          ip: context?.ipAddress,
+          userAgent: context?.userAgent,
+        },
+      };
+
+      // No esperamos a que se publique para no bloquear la respuesta
+      this.eventBus.publish(event).catch((error) => {
+        logger.error({
+          message: 'Failed to publish login.success event',
+          userId: user.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      });
+
+      logger.info({
+        message: 'Login success event published',
+        userId: user.id,
+        email: user.email,
+      });
+    }
+
     return {
       token,
       user: {
@@ -72,6 +119,41 @@ export class LoginUserUseCase {
         name: user.name,
       },
     };
+  }
+
+  /**
+   * Publicar evento de login fallido
+   */
+  private async publishLoginFailedEvent(
+    email: string,
+    reason: 'invalid_credentials' | 'user_not_found' | 'account_locked',
+    context?: LoginContext
+  ): Promise<void> {
+    if (!this.eventBus) return;
+
+    const event: IEvent = {
+      type: EventType.USER_LOGIN_FAILED,
+      data: {
+        email,
+        reason,
+        ip: context?.ipAddress || 'unknown',
+        userAgent: context?.userAgent,
+        timestamp: new Date(),
+      } as UserLoginFailedEventData,
+      timestamp: new Date(),
+      metadata: {
+        ip: context?.ipAddress,
+        userAgent: context?.userAgent,
+      },
+    };
+
+    this.eventBus.publish(event).catch((error) => {
+      logger.error({
+        message: 'Failed to publish login.failed event',
+        email,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    });
   }
 
   /**

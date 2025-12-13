@@ -13,13 +13,16 @@
     "test:unit": "jest --testPathPattern=__tests__",
     "test:verbose": "jest --verbose",
     "test:ratelimit": "ts-node ../test-rate-limit.ts",
+    "test:eventbus": "ts-node examples/test-event-bus.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "events:view": "./scripts/view-events.sh",
+    "events:filter": "./scripts/filter-events.sh"
   },
   "keywords": [
     "clean-architecture",
@@ -32,6 +35,8 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.940.0",
+    "@aws-sdk/client-sns": "^3.948.0",
+    "@aws-sdk/client-sqs": "^3.948.0",
     "@aws-sdk/lib-dynamodb": "^3.940.0",
     "@prisma/adapter-pg": "^7.0.1",
     "@prisma/client": "^7.0.1",

@@ -44,18 +44,27 @@ services:
       timeout: 3s
       retries: 5
 
-  # 🔶 LocalStack (DynamoDB)
+  # 🔶 LocalStack (DynamoDB, SQS, SNS)
   localstack:
     image: localstack/localstack:3.0
     container_name: auth-service-localstack
     restart: 'no'
     ports:
-      - '4567:4566'
+      - '4567:4566' # Puerto principal de LocalStack
     environment:
-      - SERVICES=dynamodb
+      - SERVICES=dynamodb,sqs,sns
       - DEBUG=0
+      - AWS_DEFAULT_REGION=us-east-1
+      - EAGER_SERVICE_LOADING=1
+    volumes:
+      - './scripts/setup-localstack-events.sh:/etc/localstack/init/ready.d/init-aws.sh'
     networks:
       - auth-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/_localstack/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # 🎨 Adminer (PostgreSQL Admin UI - opcional)
   adminer:

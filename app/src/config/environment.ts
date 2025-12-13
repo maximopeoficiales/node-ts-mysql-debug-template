@@ -114,6 +114,30 @@ export const config = {
   performance: {
     slowRequestThreshold: getEnvNumber('SLOW_REQUEST_THRESHOLD', 1000),
   },
+
+  // Event Bus Configuration
+  events: {
+    // Tipo de event bus: 'sns' | 'sqs' | 'noop'
+    type: getEnvVar('EVENT_BUS_TYPE', 'noop') as 'sns' | 'sqs' | 'noop',
+
+    // Configuración AWS común
+    aws: {
+      region: getEnvVar('AWS_REGION', 'us-east-1'),
+      endpoint: getEnvVar('AWS_ENDPOINT', 'http://localhost:4567'), // LocalStack (puerto mapeado en docker-compose)
+      accessKeyId: getEnvVar('AWS_ACCESS_KEY_ID', 'test'),
+      secretAccessKey: getEnvVar('AWS_SECRET_ACCESS_KEY', 'test'),
+    },
+
+    // Configuración específica de SNS
+    sns: {
+      topicArn: getEnvVar('SNS_TOPIC_ARN', 'arn:aws:sns:us-east-1:000000000000:auth-events'),
+    },
+
+    // Configuración específica de SQS
+    sqs: {
+      queueUrl: getEnvVar('SQS_QUEUE_URL', 'http://localhost:4567/000000000000/auth-events-queue'),
+    },
+  },
 } as const;
 
 /**
@@ -155,6 +179,7 @@ export function logConfig(): void {
   console.log(`  Redis: ${config.redis.host}:${config.redis.port}`);
   console.log(`  DynamoDB: ${config.dynamodb.endpoint}`);
   console.log(`  JWT Expires: ${config.jwt.expiresIn}`);
+  console.log(`  Event Bus: ${config.events.type}`);
   console.log('');
 }
 

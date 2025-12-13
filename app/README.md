@@ -32,6 +32,8 @@ src/
 - ✅ **Redis Caching**: Decorator pattern para caché transparente
 - ✅ **Rate Limiting**: Protección anti-spam y anti-bruteforce
 - ✅ **DynamoDB Sessions**: Sesiones con TTL automático
+- ✅ **Event Bus**: Sistema de eventos asíncronos con AWS SQS/SNS (LocalStack)
+- ✅ **AsyncHandler**: Manejo robusto de errores en rutas Express
 - ✅ **Performance Monitoring**: Métricas en tiempo real
 - ✅ **Centralized Config**: Sin `process.env` directo
 - ✅ **Pagination**: Listados eficientes
@@ -109,6 +111,14 @@ npm run prisma:generate # Generar Prisma Client
 npm run prisma:studio   # Abrir Prisma Studio (GUI)
 npm run prisma:reset    # Reset database
 
+# Event Bus (Sistema de Eventos)
+npm run test:eventbus              # Probar Event Bus manualmente
+npm run events:view                # Ver todos los eventos emitidos
+npm run events:filter user.registered      # Filtrar por tipo específico
+npm run events:filter user.login.success
+npm run events:filter user.login.failed
+npm run events:filter user.logout
+
 # Code Quality
 npm run lint            # ESLint
 npm run format          # Prettier
@@ -120,8 +130,27 @@ npm run format          # Prettier
 Services:
   - postgres:5432 # PostgreSQL 16
   - redis:6379 # Redis 7
-  - localstack:4567 # DynamoDB local
+  - localstack:4567 # DynamoDB, SQS, SNS (AWS local)
   - adminer:8080 # PostgreSQL Admin UI
+```
+
+### LocalStack Services (Port 4567)
+
+LocalStack simula servicios AWS localmente:
+
+- **DynamoDB**: Sesiones con TTL automático
+- **SQS**: Cola de eventos (`auth-events-queue`)
+- **SNS**: Topics para pub/sub (`auth-events`)
+
+```bash
+# Verificar salud de LocalStack
+curl http://localhost:4567/_localstack/health
+
+# Ver eventos en SQS
+npm run events:view
+
+# Filtrar eventos por tipo
+npm run events:filter user.registered
 ```
 
 ### Acceder a Adminer
@@ -162,15 +191,22 @@ npm run prisma:studio
 
 ## 📖 Documentación
 
-- **[CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md)** - Sistema de configuración centralizada
-- **[POSTGRESQL_MIGRATION.md](docs/POSTGRESQL_MIGRATION.md)** - Guía de migración MySQL → PostgreSQL
-- **[OPTIMIZATION_GUIDE.md](docs/OPTIMIZATION_GUIDE.md)** - Redis, Rate Limiting, Caché
-- **[RATE_LIMIT_TESTING.md](docs/RATE_LIMIT_TESTING.md)** - Testing de rate limiting
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Arquitectura Clean detallada
-- **[DEBUG_GUIDE.md](docs/DEBUG_GUIDE.md)** - Debugging en VS Code
-- **[API_EXAMPLES.md](docs/API_EXAMPLES.md)** - Ejemplos de uso del API
-- **[QUICKSTART.md](docs/QUICKSTART.md)** - Guía de inicio rápido
-- **[VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)** - Validación de datos
+- **[docs/](docs/)** - 📚 **Índice completo de documentación**
+- **[docs/EVENT_BUS_GUIDE.md](docs/EVENT_BUS_GUIDE.md)** - Sistema de eventos asíncronos completo
+- **[docs/EVENT_BUS_IMPLEMENTATION.md](docs/EVENT_BUS_IMPLEMENTATION.md)** - Resumen de implementación
+- **[docs/LOCALSTACK_EVENT_BUS_GUIDE.md](docs/LOCALSTACK_EVENT_BUS_GUIDE.md)** - LocalStack con SQS/SNS
+- **[docs/STATUS.md](docs/STATUS.md)** - Estado actual del proyecto
+- **[docs/EXECUTIVE_SUMMARY.md](docs/EXECUTIVE_SUMMARY.md)** - Resumen ejecutivo v3.1.0
+- **[docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** - Referencia rápida de comandos
+- **[docs/CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md)** - Sistema de configuración centralizada
+- **[docs/POSTGRESQL_MIGRATION.md](docs/POSTGRESQL_MIGRATION.md)** - Guía de migración MySQL → PostgreSQL
+- **[docs/OPTIMIZATION_GUIDE.md](docs/OPTIMIZATION_GUIDE.md)** - Redis, Rate Limiting, Caché
+- **[docs/RATE_LIMIT_TESTING.md](docs/RATE_LIMIT_TESTING.md)** - Testing de rate limiting
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Arquitectura Clean detallada
+- **[docs/DEBUG_GUIDE.md](docs/DEBUG_GUIDE.md)** - Debugging en VS Code
+- **[docs/API_EXAMPLES.md](docs/API_EXAMPLES.md)** - Ejemplos de uso del API
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Guía de inicio rápido
+- **[docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)** - Validación de datos
 
 ## 🏗️ Arquitectura Clean
 
@@ -180,6 +216,8 @@ npm run prisma:studio
 │  - User Entity                         │
 │  - UserRepository Interface            │
 │  - SessionRepository Interface         │
+│  - IEventBus Interface (NEW)           │
+│  - IEvent Interface (NEW)              │
 └────────────────────────────────────────┘
               ▲
               │
@@ -189,6 +227,7 @@ npm run prisma:studio
 │  - LoginUserUseCase                    │
 │  - GetUserUseCase                      │
 │  - LogoutUserUseCase                   │
+│  - EventDTOs (NEW)                     │
 └────────────────────────────────────────┘
               ▲
               │
@@ -197,9 +236,14 @@ npm run prisma:studio
 │  - PrismaUserRepository                │
 │  - CachedUserRepository (Decorator)    │
 │  - DynamoDBSessionRepository           │
+│  - SQSEventBus (NEW)                   │
+│  - SNSEventBus (NEW)                   │
+│  - NoOpEventBus (NEW)                  │
+│  - EventBusFactory (NEW)               │
 │  - PrismaConnection (Singleton)        │
 │  - RedisCache                          │
 │  - RateLimitMiddleware (Factory)       │
+│  - AsyncHandler (NEW)                  │
 └────────────────────────────────────────┘
               ▲
               │
@@ -216,11 +260,82 @@ npm run prisma:studio
 
 - **Repository Pattern**: Abstracción de acceso a datos
 - **Decorator Pattern**: `CachedUserRepository` envuelve cualquier repository
-- **Factory Pattern**: `RateLimitFactory` crea rate limiters configurados
+- **Factory Pattern**: `RateLimitFactory`, `EventBusFactory` crean instancias configuradas
 - **Singleton Pattern**: `PrismaConnection`, `RedisConnection`, `DynamoDBConnection`
-- **Dependency Injection**: Casos de uso inyectan repositorios
+- **Dependency Injection**: Casos de uso inyectan repositorios y EventBus
+- **Dependency Inversion**: UseCases dependen de `IEventBus`, no de implementaciones
+- **AsyncHandler Pattern**: Wrapper para manejo robusto de errores async en Express
 
-## 📊 Performance
+## � Sistema de Eventos
+
+Sistema completo de eventos asíncronos que permite desacoplar operaciones secundarias del flujo principal.
+
+### Eventos Implementados
+
+| Evento               | Cuándo se Emite       | Datos Incluidos              |
+| -------------------- | --------------------- | ---------------------------- |
+| `user.registered`    | Usuario se registra   | userId, email, name          |
+| `user.login.success` | Login exitoso         | userId, email, ip, sessionId |
+| `user.login.failed`  | Login fallido         | email, reason, ip            |
+| `user.logout`        | Usuario cierra sesión | userId, email, sessionId     |
+
+### Implementaciones Disponibles
+
+```typescript
+// 1. NoOp - Para desarrollo local sin infraestructura
+EVENT_BUS_TYPE=noop
+
+// 2. SQS - Cola simple para un solo consumidor
+EVENT_BUS_TYPE=sqs
+SQS_QUEUE_URL=http://localhost:4567/000000000000/auth-events-queue
+
+// 3. SNS - Pub/Sub para múltiples suscriptores
+EVENT_BUS_TYPE=sns
+SNS_TOPIC_ARN=arn:aws:sns:us-east-1:000000000000:auth-events
+```
+
+### Comandos Útiles
+
+```bash
+# Ver todos los eventos emitidos
+npm run events:view
+
+# Filtrar por tipo específico
+npm run events:filter user.registered
+npm run events:filter user.login.success
+npm run events:filter user.login.failed
+npm run events:filter user.logout
+
+# Probar Event Bus manualmente
+npm run test:eventbus
+
+# Purgar todos los eventos (limpiar cola)
+aws --endpoint-url=http://localhost:4567 \
+  sqs purge-queue \
+  --queue-url http://localhost:4567/000000000000/auth-events-queue
+```
+
+### Arquitectura de Eventos
+
+```
+UserController → UseCase → EventBus.publish()
+                              ↓
+                    ┌─────────┴──────────┐
+                    │                    │
+                SQSEventBus         SNSEventBus
+                    │                    │
+                    ↓                    ↓
+              LocalStack SQS      LocalStack SNS
+                    │                    │
+                    └─────────┬──────────┘
+                              ↓
+                      [Future Workers]
+                    (Email, Analytics, etc.)
+```
+
+**Nota**: Actualmente en **Fase 1** (solo productores). Los consumidores/workers serán implementados en Fase 2.
+
+## �📊 Performance
 
 - **Redis Cache**: 80-95% hit rate, ~8ms vs ~45ms sin caché
 - **Rate Limiting**: Redis counters con TTL automático
@@ -263,6 +378,8 @@ curl -X POST http://localhost:3000/api/users/register \
 | ORM        | Prisma 7        |
 | Cache      | Redis 7         |
 | Sessions   | DynamoDB        |
+| Event Bus  | AWS SQS/SNS     |
+| AWS Local  | LocalStack 3.0  |
 | Validation | class-validator |
 | Auth       | JWT             |
 | Password   | bcrypt          |

@@ -83,9 +83,17 @@ export class UserController {
       throw new ValidationError('Token is required');
     }
 
-    await this.logoutUserUseCase.execute(token);
+    // Extraer información del usuario del request (viene del AuthMiddleware)
+    const userId = req.userId;
+    const email = req.userEmail;
 
-    logger.info({ message: 'User logged out successfully' });
+    await this.logoutUserUseCase.execute(token, userId, email);
+
+    logger.info({
+      message: 'User logged out successfully',
+      userId,
+      email,
+    });
 
     res.status(200).json({ message: 'Logout successful' });
   }

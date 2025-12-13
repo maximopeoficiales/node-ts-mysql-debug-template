@@ -1,6 +1,6 @@
 # 📚 Documentación - Auth Service Project
 
-Bienvenido a la documentación completa del proyecto Auth Service. Esta carpeta contiene todas las guías y referencias necesarias para trabajar con el proyecto.
+Bienvenido a la documentación completa del proyecto Auth Service. Esta carpeta contiene **20 archivos** con todas las guías y referencias necesarias para trabajar con el proyecto.
 
 ## 📑 Índice de Documentación
 
@@ -8,6 +8,15 @@ Bienvenido a la documentación completa del proyecto Auth Service. Esta carpeta 
 
 - **[QUICKSTART.md](QUICKSTART.md)** - Guía rápida para poner en marcha el proyecto
 - **[CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md)** - Sistema de configuración centralizada
+
+### 📨 Sistema de Eventos (Nuevo)
+
+- **[EVENT_BUS_GUIDE.md](EVENT_BUS_GUIDE.md)** - Guía completa del sistema de eventos
+- **[EVENT_BUS_IMPLEMENTATION.md](EVENT_BUS_IMPLEMENTATION.md)** - Resumen de implementación
+- **[LOCALSTACK_EVENT_BUS_GUIDE.md](LOCALSTACK_EVENT_BUS_GUIDE.md)** - LocalStack con SQS/SNS
+- **[STATUS.md](STATUS.md)** - Estado actual del proyecto
+- **[EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md)** - Resumen ejecutivo
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Referencia rápida
 
 ### 🏗️ Arquitectura
 
@@ -45,6 +54,14 @@ Bienvenido a la documentación completa del proyecto Auth Service. Esta carpeta 
 1. [QUICKSTART.md](QUICKSTART.md) - Primeros pasos
 2. [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) - Configurar variables de entorno
 3. [API_EXAMPLES.md](API_EXAMPLES.md) - Ver ejemplos de API
+4. [EVENT_BUS_GUIDE.md](EVENT_BUS_GUIDE.md) - Sistema de eventos asíncronos
+
+### Quiero trabajar con eventos
+
+1. [EVENT_BUS_GUIDE.md](EVENT_BUS_GUIDE.md) - Guía completa
+2. [LOCALSTACK_EVENT_BUS_GUIDE.md](LOCALSTACK_EVENT_BUS_GUIDE.md) - Configurar LocalStack
+3. [EVENT_BUS_IMPLEMENTATION.md](EVENT_BUS_IMPLEMENTATION.md) - Implementación técnica
+4. [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Comandos rápidos
 
 ### Quiero entender la arquitectura
 
@@ -73,8 +90,9 @@ Bienvenido a la documentación completa del proyecto Auth Service. Esta carpeta 
 - **Database**: PostgreSQL 16 Alpine + Prisma 7
 - **Cache**: Redis 7
 - **Sessions**: DynamoDB (LocalStack)
+- **Event Bus**: AWS SQS/SNS (LocalStack)
 - **Architecture**: Clean Architecture + SOLID
-- **Patterns**: Repository, Decorator, Factory, Singleton
+- **Patterns**: Repository, Decorator, Factory, Singleton, Dependency Inversion
 
 ## 🤝 Contribuir a la Documentación
 
@@ -95,5 +113,6 @@ Si tienes dudas que no están cubiertas en la documentación:
 
 ---
 
-**Última actualización**: Noviembre 2025
-**Versión del proyecto**: 3.0.0
+**Última actualización**: Diciembre 2024  
+**Versión del proyecto**: 3.1.1 (Documentación reorganizada)  
+**Total de documentos**: 20 archivos en docs/

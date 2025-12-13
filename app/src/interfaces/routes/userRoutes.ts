@@ -10,9 +10,14 @@ import { DynamoDBSessionRepository } from '../../infrastructure/repositories/Dyn
 import { ValidationMiddleware } from '../../infrastructure/middleware/ValidationMiddleware';
 import { AuthMiddleware } from '../../infrastructure/middleware/AuthMiddleware';
 import { RateLimitFactory } from '../../infrastructure/middleware/RateLimitMiddleware';
+import { asyncHandler } from '../../infrastructure/middleware/AsyncHandler';
 import { CreateUserDTO, LoginDTO } from '../../domain/entities/User';
+import { EventBusFactory } from '../../infrastructure/events/EventBusFactory';
 
 const router = Router();
+
+// Inicializar Event Bus
+const eventBus = EventBusFactory.create();
 
 // Inicializar repositorios
 const prismaUserRepository = new PrismaUserRepository();
@@ -20,11 +25,11 @@ const prismaUserRepository = new PrismaUserRepository();
 const userRepository = new CachedUserRepository(prismaUserRepository, 3600);
 const sessionRepository = new DynamoDBSessionRepository();
 
-// Inicializar casos de uso
-const createUserUseCase = new CreateUserUseCase(userRepository);
-const loginUserUseCase = new LoginUserUseCase(userRepository, sessionRepository);
+// Inicializar casos de uso con EventBus
+const createUserUseCase = new CreateUserUseCase(userRepository, eventBus);
+const loginUserUseCase = new LoginUserUseCase(userRepository, sessionRepository, eventBus);
 const getUserUseCase = new GetUserUseCase(userRepository);
-const logoutUserUseCase = new LogoutUserUseCase(sessionRepository);
+const logoutUserUseCase = new LogoutUserUseCase(sessionRepository, eventBus);
 
 // Inicializar controlador
 const userController = new UserController(
@@ -48,28 +53,37 @@ router.post(
   '/register',
   registerRateLimit.middleware(),
   ValidationMiddleware.validate(CreateUserDTO),
-  (req, res) => userController.register(req, res)
+  asyncHandler((req, res) => userController.register(req, res))
 );
 
 router.post(
   '/login',
   loginRateLimit.middleware(),
   ValidationMiddleware.validate(LoginDTO),
-  (req, res) => userController.login(req, res)
+  asyncHandler((req, res) => userController.login(req, res))
 );
 
 // Rutas protegidas con rate limiting
-router.post('/logout', generalRateLimit.middleware(), authMiddleware.authenticate, (req, res) =>
-  userController.logout(req, res)
+router.post(
+  '/logout',
+  generalRateLimit.middleware(),
+  authMiddleware.authenticate,
+  asyncHandler((req, res) => userController.logout(req, res))
 );
 
-router.get('/:id', generalRateLimit.middleware(), authMiddleware.authenticate, (req, res) =>
-  userController.getUser(req, res)
+router.get(
+  '/:id',
+  generalRateLimit.middleware(),
+  authMiddleware.authenticate,
+  asyncHandler((req, res) => userController.getUser(req, res))
 );
 
 // Nueva ruta: listado paginado de usuarios
-router.get('/', generalRateLimit.middleware(), authMiddleware.authenticate, (req, res) =>
-  userController.listUsers(req, res)
+router.get(
+  '/',
+  generalRateLimit.middleware(),
+  authMiddleware.authenticate,
+  asyncHandler((req, res) => userController.listUsers(req, res))
 );
 
 export default router;

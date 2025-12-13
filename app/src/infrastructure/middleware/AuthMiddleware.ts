@@ -8,6 +8,9 @@ export interface AuthRequest extends Request {
     userId: number;
     email: string;
   };
+  // Propiedades de acceso directo para conveniencia
+  userId?: number;
+  userEmail?: string;
 }
 
 export class AuthMiddleware {
@@ -39,6 +42,10 @@ export class AuthMiddleware {
       }
 
       req.user = decoded;
+      // Agregar propiedades de acceso directo
+      req.userId = decoded.userId;
+      req.userEmail = decoded.email;
+
       next();
     } catch (error) {
       if (error instanceof jwt.JsonWebTokenError) {

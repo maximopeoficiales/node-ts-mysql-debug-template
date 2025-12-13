@@ -1,6 +1,140 @@
 # 📝 Resumen de Cambios - Reorganización y Limpieza
 
-**Fecha**: 29 de Noviembre, 2025
+---
+
+## �️ [v3.1.1] - Reorganización de Documentación - Diciembre 2024
+
+### ♻️ Reorganización
+
+Todos los archivos de documentación han sido movidos a la carpeta `docs/` para mejor organización:
+
+**Archivos movidos a docs/**:
+
+- ✅ `EVENT_BUS_IMPLEMENTATION.md` → `docs/EVENT_BUS_IMPLEMENTATION.md`
+- ✅ `LOCALSTACK_EVENT_BUS_GUIDE.md` → `docs/LOCALSTACK_EVENT_BUS_GUIDE.md`
+- ✅ `STATUS.md` → `docs/STATUS.md`
+- ✅ `EXECUTIVE_SUMMARY.md` → `docs/EXECUTIVE_SUMMARY.md`
+- ✅ `QUICK_REFERENCE.md` → `docs/QUICK_REFERENCE.md`
+
+**Archivos en raíz** (comunes en proyectos):
+
+- ✅ `README.md` - Documentación principal
+- ✅ `CHANGELOG.md` - Este archivo
+
+**Total en docs/**: 20 archivos de documentación organizados
+
+### 📝 Archivos Actualizados
+
+- `README.md` - Referencias actualizadas a docs/
+- `docs/README.md` - Índice actualizado con nuevos archivos
+
+---
+
+## �🚀 [v3.1.0] - Sistema de Eventos (Event Bus) - Diciembre 2024
+
+### ✨ Nuevas Funcionalidades
+
+#### 📨 Event Bus Completo
+
+- ✅ **Sistema de eventos asíncronos** con AWS SQS y SNS
+- ✅ **LocalStack 3.0** configurado con DynamoDB, SQS y SNS
+- ✅ **Factory Pattern** para crear EventBus según configuración
+- ✅ **Dependency Inversion** con interfaces `IEventBus` e `IEvent`
+- ✅ **AsyncHandler middleware** para manejo robusto de errores async
+- ✅ **Scripts de visualización** (`view-events.sh`, `filter-events.sh`)
+
+#### Eventos Implementados
+
+| Evento               | Descripción           | Datos                        |
+| -------------------- | --------------------- | ---------------------------- |
+| `user.registered`    | Usuario se registra   | userId, email, name          |
+| `user.login.success` | Login exitoso         | userId, email, ip, sessionId |
+| `user.login.failed`  | Login fallido         | email, reason, ip            |
+| `user.logout`        | Usuario cierra sesión | userId, email, sessionId     |
+
+#### Archivos Nuevos (13)
+
+- `src/domain/events/IEvent.ts` - Interface base
+- `src/domain/events/IEventBus.ts` - Interface EventBus
+- `src/application/dtos/EventDTOs.ts` - Tipos de eventos
+- `src/infrastructure/events/SQSEventBus.ts` - Implementación SQS
+- `src/infrastructure/events/SNSEventBus.ts` - Implementación SNS
+- `src/infrastructure/events/NoOpEventBus.ts` - Mock para testing
+- `src/infrastructure/events/EventBusFactory.ts` - Factory pattern
+- `src/infrastructure/middleware/AsyncHandler.ts` - Error wrapper
+- `scripts/setup-localstack-events.sh` - Setup automático
+- `scripts/view-events.sh` - Ver eventos
+- `scripts/filter-events.sh` - Filtrar eventos
+- `examples/test-event-bus.ts` - Testing manual
+- `docs/EVENT_BUS_GUIDE.md` - Documentación completa
+
+#### Archivos Modificados (11)
+
+- `src/config/environment.ts` - Config de eventos
+- `src/application/use-cases/CreateUserUseCase.ts` - Integración EventBus
+- `src/application/use-cases/LoginUserUseCase.ts` - Eventos login
+- `src/application/use-cases/LogoutUserUseCase.ts` - Evento logout
+- `src/interfaces/routes/userRoutes.ts` - asyncHandler wrapper
+- `src/interfaces/controllers/UserController.ts` - Logout mejorado
+- `src/infrastructure/middleware/AuthMiddleware.ts` - userId y userEmail
+- `docker-compose.yml` - LocalStack con SQS/SNS
+- `package.json` - Scripts y AWS SDK
+- `.env.example` - Variables Event Bus
+- `README.md` - Documentación actualizada
+
+#### Comandos Añadidos
+
+```bash
+npm run test:eventbus              # Probar Event Bus
+npm run events:view                # Ver todos los eventos
+npm run events:filter <tipo>       # Filtrar por tipo
+```
+
+#### Variables de Entorno
+
+```bash
+EVENT_BUS_TYPE=sqs                 # o 'sns', 'noop'
+AWS_ENDPOINT=http://localhost:4567
+SQS_QUEUE_URL=http://localhost:4567/000000000000/auth-events-queue
+SNS_TOPIC_ARN=arn:aws:sns:us-east-1:000000000000:auth-events
+```
+
+#### Dependencias Añadidas
+
+```json
+{
+  "@aws-sdk/client-sqs": "^3.940.0",
+  "@aws-sdk/client-sns": "^3.940.0"
+}
+```
+
+#### Patrones SOLID Implementados
+
+- ✅ **Single Responsibility** - Cada EventBus una responsabilidad
+- ✅ **Open/Closed** - Extensible sin modificar código existente
+- ✅ **Liskov Substitution** - Implementaciones intercambiables
+- ✅ **Interface Segregation** - Interfaces mínimas y específicas
+- ✅ **Dependency Inversion** - UseCases dependen de abstracciones
+
+#### Arquitectura
+
+```
+UserController → UseCase → EventBus.publish()
+                              ↓
+                    ┌─────────┴──────────┐
+                SQSEventBus         SNSEventBus
+                    ↓                    ↓
+              LocalStack           LocalStack
+                (Queue)              (Topic)
+```
+
+**Nota**: Fase 1 completada (productores). Fase 2 pendiente (consumers/workers).
+
+---
+
+## 📁 [v3.0.0] - Reorganización y Limpieza - Noviembre 2024
+
+**Fecha**: 29 de Noviembre, 2024
 **Versión**: 3.0.0
 
 ## ✅ Cambios Realizados
