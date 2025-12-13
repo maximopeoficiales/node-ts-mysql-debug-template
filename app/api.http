@@ -1,0 +1,169 @@
+### Variables
+@baseUrl = http://localhost:3000
+@contentType = application/json
+
+### Health Check
+GET {{baseUrl}}/
+
+###
+
+### ========================================
+### ENDPOINTS PÚBLICOS
+### ========================================
+
+### 1. Registrar Usuario
+POST {{baseUrl}}/api/users/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+###
+
+### 2. Login (Guarda sesión en DynamoDB)
+# @name login
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+###
+
+### Guardar token de la respuesta del login
+@token = {{login.response.body.token}}
+
+###
+
+### ========================================
+### ENDPOINTS PROTEGIDOS (Requieren token)
+### ========================================
+
+### 3. Obtener Usuario por ID
+GET {{baseUrl}}/api/users/1
+Authorization: Bearer {{token}}
+
+###
+
+### 4. Logout (Elimina sesión de DynamoDB)
+POST {{baseUrl}}/api/users/logout
+Authorization: Bearer {{token}}
+
+###
+
+### 5. Intentar acceder después del logout (debe fallar)
+GET {{baseUrl}}/api/users/1
+Authorization: Bearer {{token}}
+
+###
+
+### ========================================
+### EJEMPLOS CON DIFERENTES USUARIOS
+### ========================================
+
+### Registrar segundo usuario
+POST {{baseUrl}}/api/users/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "SecurePass456!"
+}
+
+###
+
+### Login con segundo usuario
+# @name loginJane
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "email": "jane@example.com",
+  "password": "SecurePass456!"
+}
+
+###
+
+@tokenJane = {{loginJane.response.body.token}}
+
+###
+
+### Obtener usuario con token de Jane
+GET {{baseUrl}}/api/users/2
+Authorization: Bearer {{tokenJane}}
+
+###
+
+### ========================================
+### CASOS DE ERROR
+### ========================================
+
+### Error: Email duplicado
+POST {{baseUrl}}/api/users/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Duplicate User",
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+###
+
+### Error: Credenciales inválidas
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "WrongPassword!"
+}
+
+###
+
+### Error: Token inválido
+GET {{baseUrl}}/api/users/1
+Authorization: Bearer invalid.token.here
+
+###
+
+### Error: Sin token
+GET {{baseUrl}}/api/users/1
+
+###
+
+### Error: Validación - Password corto
+POST {{baseUrl}}/api/users/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "short@example.com",
+  "password": "123"
+}
+
+###
+
+### Error: Validación - Email inválido
+POST {{baseUrl}}/api/users/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "invalid-email",
+  "password": "Password123!"
+}
+
+###
+
+### Error: Usuario no encontrado
+GET {{baseUrl}}/api/users/999
+Authorization: Bearer {{token}}
+
+###
